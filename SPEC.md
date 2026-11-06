@@ -28,13 +28,16 @@ Each player has their own double in and double out. The inner bull is a double (
 The game on the owner's scoreboard. It isn't the lives-based game of the same name on websites. Two sides, rows 20 down to 10, then D, T and B.
 
 - Three marks open a row for a side. Further hits score until the other side also has three. Then the row is dead and scores nothing.
-- A live double or treble of 10 to 20 multiplies on its own row. T20 is three marks. Spare marks in the same dart score.
+- **A double or treble of a live 10 to 20 is the thrower's choice,** and the app shows what each option would do:
+  - *On its own row:* it multiplies. T18 is three marks. Spare marks score that number each, unless the other side has the row closed too. With one mark already, T18 fills two and the third scores 18. With the row full, T18 scores 54.
+  - *On D or T:* one mark there. With that row full, it scores the dart's real value, so T18 scores 54.
+  - If D or T is dead, the only option is its own row.
 - Bull: outer one mark, inner two, each spare mark scores 25.
 - Once D or T is open, further hits score the dart's real value (D16 is 32) until the row is dead.
 - **Toggles, agreed before each game, per player:**
   - *1 to 9 count on D and T:* a double or treble of 1 to 9 is one mark there.
   - *Dead numbers count on D and T:* a double or treble of a dead number is one mark there.
-- **Both toggles off:** nothing else could fill D and T, so that player chooses where each live double or treble goes: its own row, or one mark on D or T.
+- **Both toggles off:** only doubles and trebles of live numbers can fill D and T.
 - **Winning:** a side wins as soon as every row is open and it's level or ahead (our own default, the owner skipped this question). Anyone can end the game early, and the higher score wins. Level is a draw.
 
 ## Handicap
@@ -59,6 +62,12 @@ A win scores more under harder rules, using the winner's own rules. All are our 
 ## Banter
 
 Every match gets one cheeky line, always the same for that match, and picks up 180s, three in a bed, a 26 and repeated busts. Anyone in the league can comment on a match. Share gives a square picture for WhatsApp, falling back to text.
+
+## Look
+
+An old saloon with a 386 behind the bar. The header and menu are a DOS screen, using the device's monospace font, with no downloaded fonts. The page is snooker baize with mahogany frames, brass for selected buttons, ivory cards and chalk slates for scores. League positions are snooker balls, black first, then pink, blue, brown, green, yellow and red for everyone below that. The cursor stops blinking if the phone asks for reduced motion.
+
+Ladder ranks run Sheriff, Deputy, Gunslinger, Card sharp, Cowhand, Stable hand, and whoever is last is the Greenhorn. Banter lines borrow from the saloon and the snooker table, but stay about the darts.
 
 ## Keeping results honest
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dartLabel, killerChoice, possibleTotal, replay, rowDead, summarize } from '../app/games.js';
+import { dartLabel, killerChoice, killerOptions, possibleTotal, replay, rowDead, summarize } from '../app/games.js';
 
 const sides = (a = {}, b = {}) => [{ name: 'A', ...a }, { name: 'B', ...b }];
 const dart = (n, m = 1) => ({ t: 'dart', n, m });
@@ -175,27 +175,67 @@ test('Killer: the inner bull is two marks, the outer one, and extras score 25 a 
   assert.equal(state.sides[0].score, 50);
 });
 
-test('Killer: with both toggles off, the player places a live double or treble', () => {
-  const config = killer();
-  const fresh = replay(config, []);
-  assert.equal(killerChoice(fresh, config, { n: 20, m: 3 }), true);
-  assert.equal(killerChoice(fresh, config, { n: 20, m: 1 }), false, 'a single has no choice');
-  assert.equal(killerChoice(fresh, config, { n: 5, m: 3 }), false, 'low numbers have no choice');
-  assert.equal(killerChoice(fresh, config, { n: 25, m: 2 }), false, 'bulls have no choice');
-  const placed = replay(config, [{ t: 'dart', n: 20, m: 3, to: 'bonus' }]);
-  assert.equal(placed.sides[0].marks.T, 1);
-  assert.equal(placed.sides[0].marks[20], undefined);
-  assert.equal(replay(config, [dart(20, 3)]).sides[0].marks[20], 3);
+test('Killer: a live double or treble can go on its own row or on D or T, whatever the toggles', () => {
+  for (const config of [killer(), killer({ countLow: true, countDead: true })]) {
+    const fresh = replay(config, []);
+    assert.equal(killerChoice(fresh, config, { n: 20, m: 3 }), true);
+    assert.equal(killerChoice(fresh, config, { n: 20, m: 2 }), true);
+    assert.equal(killerChoice(fresh, config, { n: 20, m: 1 }), false, 'a single has no choice');
+    assert.equal(killerChoice(fresh, config, { n: 5, m: 3 }), false, 'low numbers have no choice');
+    assert.equal(killerChoice(fresh, config, { n: 25, m: 2 }), false, 'bulls have no choice');
+    const placed = replay(config, [{ t: 'dart', n: 20, m: 3, to: 'bonus' }]);
+    assert.equal(placed.sides[0].marks.T, 1);
+    assert.equal(placed.sides[0].marks[20], undefined);
+    assert.equal(replay(config, [dart(20, 3)]).sides[0].marks[20], 3);
+  }
 });
 
-test('Killer: only a both-off player gets that choice, and not on a dead number', () => {
-  const easy = killer({ countLow: true });
-  assert.equal(killerChoice(replay(easy, []), easy, { n: 20, m: 3 }), false);
-  assert.throws(() => replay(easy, [{ t: 'dart', n: 20, m: 3, to: 'bonus' }]));
-  const hard = killer();
-  const dead = replay(hard, [dart(20, 3), miss, miss, dart(20, 3), miss, miss]);
-  assert.equal(killerChoice(dead, hard, { n: 20, m: 3 }), false);
-  assert.throws(() => replay(hard, [dart(20, 3), miss, miss, dart(20, 3), miss, miss, { t: 'dart', n: 20, m: 3, to: 'bonus' }]));
+const asOption = ({ to, row, marks, scored }) => ({ to, row, marks, scored });
+
+test('Killer: 18 full, a treble 18 is 54 points or one mark on T', () => {
+  const config = killer();
+  const state = replay(config, [dart(18, 3)]);
+  assert.deepEqual(killerOptions(state, config, { n: 18, m: 3 }).map(asOption), [
+    { to: 'row', row: 18, marks: 0, scored: 54 },
+    { to: 'bonus', row: 'T', marks: 1, scored: 0 },
+  ]);
+  assert.equal(replay(config, [dart(18, 3), dart(18, 3)]).sides[0].score, 54);
+  const onT = replay(config, [dart(18, 3), { t: 'dart', n: 18, m: 3, to: 'bonus' }]);
+  assert.equal(onT.sides[0].score, 0);
+  assert.equal(onT.sides[0].marks.T, 1);
+});
+
+test('Killer: T full and one 18, a treble 18 is two marks and 18 points, or 54 points on T', () => {
+  const config = killer();
+  const fillT = { t: 'dart', n: 20, m: 3, to: 'bonus' };
+  const events = [fillT, fillT, fillT, ...passB, dart(18)];
+  const state = replay(config, events);
+  assert.deepEqual(killerOptions(state, config, { n: 18, m: 3 }).map(asOption), [
+    { to: 'row', row: 18, marks: 2, scored: 18 },
+    { to: 'bonus', row: 'T', marks: 0, scored: 54 },
+  ]);
+  const onRow = replay(config, [...events, dart(18, 3)]);
+  assert.equal(onRow.sides[0].marks[18], 3);
+  assert.equal(onRow.sides[0].score, 18);
+  assert.equal(replay(config, [...events, { t: 'dart', n: 18, m: 3, to: 'bonus' }]).sides[0].score, 54);
+});
+
+test('Killer: if the other player has three 18s, the spare mark scores nothing', () => {
+  const config = killer();
+  const state = replay(config, [dart(18), miss, miss, dart(18, 3), miss, miss]);
+  assert.deepEqual(killerOptions(state, config, { n: 18, m: 3 }).map(asOption)[0], { to: 'row', row: 18, marks: 2, scored: 0 });
+  assert.equal(replay(config, [dart(18), miss, miss, dart(18, 3), miss, miss, dart(18, 3)]).sides[0].score, 0);
+});
+
+test('Killer: no choice on a dead number, or when D or T is dead', () => {
+  const config = killer({ countDead: true });
+  const dead = [dart(20, 3), miss, miss, dart(20, 3), miss, miss];
+  assert.equal(killerChoice(replay(config, dead), config, { n: 20, m: 3 }), false);
+  assert.throws(() => replay(config, [...dead, { t: 'dart', n: 20, m: 3, to: 'bonus' }]));
+  const fillT = { t: 'dart', n: 19, m: 3, to: 'bonus' };
+  const deadT = [fillT, fillT, fillT, fillT, fillT, fillT];
+  assert.equal(killerChoice(replay(config, deadT), config, { n: 18, m: 3 }), false);
+  assert.equal(killerChoice(replay(config, deadT), config, { n: 18, m: 2 }), true);
 });
 
 test('Killer: rules are per player, so his doubles count and mine do not', () => {

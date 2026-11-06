@@ -151,14 +151,27 @@ function killerStart(config) {
 
 const bonusRow = (m) => (m === 2 ? 'D' : 'T');
 
-/**
- * A player with both toggles off has nothing else that can fill D and T, so a double or treble of a
- * live number is theirs to place: its own row, or one mark on D or T.
- */
+/** What a number of marks on a row would do for a side right now, without changing anything. */
+function markEffect(state, side, row, marks, each) {
+  const added = Math.min(marks, MARKS_TO_OPEN - (side.marks[row] ?? 0));
+  const spare = marks - added;
+  const closedByAll = state.sides.every((other) => other === side || rowOpen(other, row));
+  return { row, marks: added, spare, scored: spare > 0 && !closedByAll ? spare * each : 0 };
+}
+
+/** A double or treble of a live 10 to 20 can go on its own row or on D or T, as long as that row isn't dead. */
 export function killerChoice(state, config, { n, m }) {
-  const rules = config.sides[state.turn].rules ?? {};
-  if (rules.countLow || rules.countDead || m < 2 || n < 10 || n > 20) return false;
+  if (m < 2 || n < 10 || n > 20) return false;
   return !rowDead(state, n) && !rowDead(state, bonusRow(m));
+}
+
+/** The two ways to place a dart that has a choice, with what each would do, for the buttons. */
+export function killerOptions(state, config, { n, m }) {
+  const side = state.sides[state.turn];
+  return [
+    { to: 'row', ...markEffect(state, side, n, m, n) },
+    { to: 'bonus', ...markEffect(state, side, bonusRow(m), 1, n * m) },
+  ];
 }
 
 /** Which row a dart belongs on right now, how many marks it brings and what each spare mark scores. */
@@ -184,16 +197,13 @@ function killerDart(state, config, dart) {
   const numberDead = dart.n >= 10 && dart.n <= 20 && rowDead(state, dart.n);
   state.last = { dart, marks: 0, scored: 0, row: target?.row ?? null, why: target ? null : numberDead ? 'dead' : 'none' };
   if (target && !rowDead(state, target.row)) {
-    const have = side.marks[target.row] ?? 0;
-    const added = Math.min(target.marks, MARKS_TO_OPEN - have);
-    side.marks[target.row] = have + added;
-    const spare = target.marks - added;
-    const scored = spare > 0 && !rowDead(state, target.row) ? spare * target.each : 0;
-    side.score += scored;
-    side.earned += scored;
-    side.counted += added + (scored > 0 ? spare : 0);
-    state.last.marks = added;
-    state.last.scored = scored;
+    const effect = markEffect(state, side, target.row, target.marks, target.each);
+    side.marks[target.row] = (side.marks[target.row] ?? 0) + effect.marks;
+    side.score += effect.scored;
+    side.earned += effect.scored;
+    side.counted += effect.marks + (effect.scored > 0 ? effect.spare : 0);
+    state.last.marks = effect.marks;
+    state.last.scored = effect.scored;
   } else if (target) {
     state.last.why = 'dead';
   }
