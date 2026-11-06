@@ -1,0 +1,23 @@
+{
+  "name": "pyltjies",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A free, open source darts scorer, league and banter board, for tossers",
+  "license": "MIT",
+  "repository": "github:dirkjlouw/pyltjies",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"tests/*.test.js\"",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  },
+  "dependencies": {
+    "nodemailer": "7.0.13"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Pyltjies",
+  "short_name": "Pyltjies",
+  "description": "Darts scoring and banter, for tossers.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10201a",
+  "theme_color": "#10201a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

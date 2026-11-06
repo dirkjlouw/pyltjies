@@ -1,0 +1,24 @@
+name: pyltjies-local
+
+# For trying Pyltjies on your own Mac. It listens on this machine only, and sign-in codes go to
+# `docker compose -f compose.local.yaml logs` unless SMTP is set. Never use this on the server.
+services:
+  pyltjies:
+    build: .
+    image: pyltjies:latest
+    container_name: pyltjies-local
+    restart: "no"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      TZ: Africa/Johannesburg
+      TRUST_PROXY: "0"
+      PUBLIC_URL: http://localhost:${PYLTJIES_PORT:-8080}
+    ports:
+      - "127.0.0.1:${PYLTJIES_PORT:-8080}:8080"
+    volumes:
+      - pyltjies-local-data:/data
+
+volumes:
+  pyltjies-local-data:
