@@ -105,6 +105,20 @@ test('any member can invite, and an invite link only works once', async () => {
   assert.equal((await owner.call('GET', '/api/league')).data.members.length, 3);
 });
 
+test('everyone sees who joined and when, and only the owner sees when they were last around', async () => {
+  const { join, friend } = await start();
+  const owner = await join(OWNER, 'Dirk');
+  const sam = await friend(owner.call, 'sam@example.com', 'Sam');
+  const seenByOwner = (await owner.call('GET', '/api/league')).data.members;
+  assert.equal(seenByOwner[1].name, 'Sam');
+  assert.ok(seenByOwner[1].joinedAt > 0);
+  assert.ok(seenByOwner[1].lastSeenAt > 0);
+  const seenBySam = (await sam.call('GET', '/api/league')).data.members;
+  assert.ok(seenBySam[0].joinedAt > 0);
+  assert.equal('lastSeenAt' in seenBySam[0], false);
+  assert.equal('lastSeenAt' in seenBySam[1], false);
+});
+
 test('a finished game is saved, and the league works it out from the darts', async () => {
   const { join, friend } = await start();
   const owner = await join(OWNER, 'Dirk');

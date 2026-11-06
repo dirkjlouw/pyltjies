@@ -275,3 +275,20 @@ test('Killer: the choice shows what each option would do', async ({ page, contex
   await place(page, '18 row');
   await expect(page.locator('#score-0')).toHaveText('54');
 });
+
+for (const width of [340, 390, 560, 600, 800, 1400]) {
+  test(`the header, menu and cards share the same edges at ${width}px`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await twoPlayers(context, page);
+    const box = async (selector) => page.locator(selector).first().boundingBox();
+    const frame = await box('.dos-frame');
+    const card = await box('#screen .card');
+    const tabs = await box('.nav button:first-child');
+    const lastTab = await box('.nav button:last-child');
+    expect(Math.abs(frame.x - card.x)).toBeLessThan(1);
+    expect(Math.abs(frame.width - card.width)).toBeLessThan(1);
+    expect(Math.abs(tabs.x - card.x)).toBeLessThan(1);
+    expect(Math.abs(lastTab.x + lastTab.width - (card.x + card.width))).toBeLessThan(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}

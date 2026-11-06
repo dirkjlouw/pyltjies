@@ -113,7 +113,9 @@ export function createApp({
     userByEmail: db.prepare('SELECT * FROM users WHERE email = ?'),
     insertUser: db.prepare('INSERT INTO users (id, email, name, role, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?)'),
     login: db.prepare("UPDATE users SET last_login = ?, role = CASE WHEN ? THEN 'owner' ELSE role END WHERE id = ?"),
-    members: db.prepare("SELECT id, name, role FROM users ORDER BY role = 'owner' DESC, created_at"),
+    members: db.prepare(`SELECT id, name, role, created_at,
+      (SELECT MAX(last_seen) FROM sessions WHERE sessions.user_id = users.id) AS last_seen
+      FROM users ORDER BY role = 'owner' DESC, created_at`),
 
     otp: db.prepare('SELECT * FROM otps WHERE email = ?'),
     putOtp: db.prepare('INSERT OR REPLACE INTO otps (email, code_hash, expires, attempts, created_at) VALUES (?, ?, ?, 0, ?)'),
@@ -208,7 +210,11 @@ export function createApp({
 
   // Everything the league shares. Email addresses never leave through this: names only.
   function league(me) {
-    const members = q.members.all().map((user) => ({ id: user.id, name: user.name, role: user.role, you: user.id === me.id }));
+    // Everyone sees when people joined. Only the owner sees when they were last around.
+    const members = q.members.all().map((user) => ({
+      id: user.id, name: user.name, role: user.role, you: user.id === me.id, joinedAt: user.created_at,
+      ...(me.role === 'owner' ? { lastSeenAt: user.last_seen } : {}),
+    }));
     const all = q.liveMatches.all().map((row) => ({
       id: row.id, playedAt: row.played_at, createdBy: row.created_by, config: JSON.parse(row.config), sides: JSON.parse(row.sides),
     }));
