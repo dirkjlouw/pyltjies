@@ -91,6 +91,7 @@ export function buildLeague(matches, members) {
       }
       for (const other of match.sides) {
         if (other === side || !other.userId || !players.has(other.userId)) continue;
+        if (side.team !== undefined && side.team === other.team) continue; // partners aren't rivals
         const rival = (player.rivals[other.userId] ??= { wins: 0, losses: 0, draws: 0 });
         if (side.won) rival.wins += 1;
         else if (other.won) rival.losses += 1;

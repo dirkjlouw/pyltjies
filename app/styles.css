@@ -195,6 +195,8 @@ button[aria-pressed="true"] { background: var(--brass); border-color: var(--wood
 .people { list-style: none; padding: 0; margin: 6px 0; }
 .people li { padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .new-tag { margin-left: 8px; padding: 0 6px; border-radius: 4px; background: var(--brass); color: var(--brass-ink); font-size: 12px; font-weight: 700; }
+.guest-row { display: flex; align-items: center; gap: 8px; }
+.guest-row span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .invite-link { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; display: block; }
 
 .toast {

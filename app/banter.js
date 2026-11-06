@@ -66,6 +66,7 @@ export function banterLine(match) {
   const sides = match.sides;
   const winner = sides.find((side) => side.won);
   if (!winner) return `${names(sides.map((side) => side.name))} drew. All that effort for absolutely nothing.`;
+  const winners = names(sides.filter((side) => side.won).map((side) => side.name));
   const losers = names(sides.filter((side) => !side.won).map((side) => side.name));
   const max = sides.find((side) => side.maxes > 0);
   if (max) return `${max.name} hit a maximum 180. Everyone else can go home.`;
@@ -77,14 +78,22 @@ export function banterLine(match) {
   if (buster) return `${buster.name} bust ${buster.busts} times. Basic subtraction is available in this app, you know.`;
   const closeness = isClose(match);
   const lines = closeness === 'close' ? CLOSE_LINES : closeness === 'heavy' ? HEAVY_LINES : WIN_LINES;
-  return fill(pick(lines, match.id), winner.name, losers);
+  return fill(pick(lines, match.id), winners, losers);
 }
 
 /** "Dirk 0 left, Sam 61 left" or "Dirk 240, Sam 180". */
 export function scoreLine(match) {
-  return match.sides.map((side) => (match.config.game === 'killer'
-    ? `${side.name} ${side.score}`
-    : `${side.name} ${side.remaining} left`)).join(', ');
+  return resultRows(match).map((row) => `${row.name} ${row.value}`).join(', ');
+}
+
+/** One row per side of the result: partners in Killer share a row. */
+export function resultRows(match) {
+  if (match.config.game !== 'killer') return match.sides.map((side) => ({ name: side.name, value: `${side.remaining} left`, won: side.won }));
+  const teams = [...new Set(match.sides.map((side, index) => side.team ?? index))];
+  return teams.map((team) => {
+    const members = match.sides.filter((side, index) => (side.team ?? index) === team);
+    return { name: names(members.map((side) => side.name)), value: String(members[0].score), won: members[0].won };
+  });
 }
 
 export const statLabel = (match, side) => (match.config.game === 'killer'

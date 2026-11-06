@@ -11,6 +11,10 @@
 - Best-of legs and sets. A match is one leg today.
 - Sync options, the owner's call: live scoreboard on friends' phones, or a second phone that can take over scoring.
 
+## Soon
+
+- Link a guest's old games to their account when they join.
+
 ## Saloon ideas
 
 - **Snooker scorer:** frames, breaks, reds and colours, with the same ladder and banter. Pool next to it.

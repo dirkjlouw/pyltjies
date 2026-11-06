@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dartLabel, killerChoice, killerOptions, possibleTotal, replay, rowDead, summarize } from '../app/games.js';
+import { dartLabel, killerChoice, killerOptions, killerOrder, possibleTotal, replay, rowDead, summarize } from '../app/games.js';
 
 const sides = (a = {}, b = {}) => [{ name: 'A', ...a }, { name: 'B', ...b }];
 const dart = (n, m = 1) => ({ t: 'dart', n, m });
@@ -306,7 +306,7 @@ test('highlights are noticed: three in a bed, 26, 180, busts', () => {
   assert.equal(bed.sides[0].maxes, 1);
   assert.equal(bed.sides[0].tons, 1);
   assert.equal(replay(x01(), [dart(5), dart(20), dart(1)]).sides[0].bedAndBreakfast, 1);
-  assert.equal(replay(killer(), [dart(20), dart(20), dart(20)]).sides[0].beds, 1);
+  assert.equal(replay(killer(), [dart(20), dart(20), dart(20)]).players[0].beds, 1);
 });
 
 test('dart labels read the way people say them', () => {
@@ -314,4 +314,63 @@ test('dart labels read the way people say them', () => {
   assert.equal(dartLabel({ n: 16, m: 2 }), 'D16');
   assert.equal(dartLabel({ n: 25, m: 2 }), 'Inner bull');
   assert.equal(dartLabel({ n: 0, m: 1 }), 'Miss');
+});
+
+const teamGame = (teams) => killer({ countLow: true, sides: teams.map((team, index) => ({ name: `P${index}`, team })) });
+
+test('Killer teams: the order alternates sides, and 3 players means one throws more', () => {
+  assert.deepEqual(killerOrder(teamGame([0, 1, 0, 1])), [0, 1, 2, 3]);
+  assert.deepEqual(killerOrder(teamGame([0, 1, 0])), [0, 1, 2, 1]);
+  assert.deepEqual(killerOrder(killer()), [0, 1]);
+});
+
+test('Killer 2 against 1: the player alone throws twice a round, or once if that is agreed', () => {
+  assert.deepEqual(killerOrder({ ...teamGame([0, 1, 0]), soloTurns: 2 }), [0, 1, 2, 1]);
+  assert.deepEqual(killerOrder({ ...teamGame([0, 1, 0]), soloTurns: 1 }), [0, 1, 2]);
+  assert.deepEqual(killerOrder({ ...teamGame([1, 0, 1]), soloTurns: 1 }), [0, 1, 2]);
+  assert.deepEqual(killerOrder({ ...teamGame([0, 1, 0, 1]), soloTurns: 1 }), [0, 1, 2, 3], 'only for 2 against 1');
+  const config = { ...teamGame([0, 1, 0]), soloTurns: 1 };
+  const state = replay(config, [...passB, ...passB, ...passB]);
+  assert.equal(state.turn, 0, 'back to the first player after three visits');
+});
+
+test('Killer teams: partners share marks and score, and take turns', () => {
+  const config = teamGame([0, 1, 0, 1]);
+  const state = replay(config, [dart(20, 3), miss, miss, ...passB, dart(20), miss, miss]);
+  assert.equal(state.sides[0].marks[20], 3);
+  assert.equal(state.sides[0].score, 20);
+  assert.equal(state.sides.length, 2);
+  assert.equal(state.turn, 3);
+  assert.equal(state.team, 1);
+});
+
+test('Killer teams: a partner closing a row counts for the side, and each player is rated on their own darts', () => {
+  const config = teamGame([0, 1, 0, 1]);
+  const events = [dart(20, 3), miss, miss, ...passB, miss, miss, miss, dart(20, 3), miss, miss];
+  const state = replay(config, events);
+  assert.equal(rowDead(state, 20), true);
+  const summary = summarize(config, state);
+  assert.equal(summary[0].stat, 3);
+  assert.equal(summary[2].stat, 0);
+  assert.equal(summary[3].stat, 3);
+  assert.equal(summary[0].team, 0);
+  assert.equal(summary[3].team, 1);
+});
+
+test('Killer teams: each thrower uses their own rules', () => {
+  const config = killer({ sides: [
+    { name: 'A', team: 0, rules: { countLow: true } }, { name: 'B', team: 1 },
+    { name: 'C', team: 0, rules: { countLow: false } }, { name: 'D', team: 1 },
+  ] });
+  const state = replay(config, [dart(5, 2), miss, miss, ...passB, dart(5, 2)]);
+  assert.equal(state.sides[0].marks.D, 1, 'only the first partner counted it');
+});
+
+test('Killer teams: everyone on the winning side wins, and a level end is a draw', () => {
+  const config = killer({ sides: [{ name: 'A', team: 0, head: 40 }, { name: 'B', team: 1 }, { name: 'C', team: 0, head: 0 }] });
+  const state = replay(config, [{ t: 'end' }]);
+  assert.equal(state.sides[0].score, 20);
+  assert.deepEqual(summarize(config, state).map((side) => side.won), [true, false, true]);
+  const level = teamGame([0, 1, 0, 1]);
+  assert.deepEqual(summarize(level, replay(level, [{ t: 'end' }])).map((side) => side.won), [false, false, false, false]);
 });
