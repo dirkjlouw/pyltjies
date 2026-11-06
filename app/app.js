@@ -1,7 +1,7 @@
 // The app's screens. A game in progress lives on this phone, so it survives a closed app or no
 // signal. Finished games wait in an outbox until the server has them.
-import { banterLine, ladderRank, scoreLine, shareText, statLabel } from './banter.js';
-import { ALL_KILLER_ROWS, KILLER_NUMBERS, dartLabel, killerChoice, killerOptions, killerTarget, possibleTotal, replay, rowDead, rowOpen, summarize } from './games.js';
+import { banterLine, ladderRank, resultRows, scoreLine, shareText, statLabel } from './banter.js';
+import { ALL_KILLER_ROWS, KILLER_NUMBERS, dartLabel, killerChoice, killerOptions, killerTarget, possibleTotal, replay, rowDead, rowOpen, summarize, teamOf } from './games.js';
 import { MIN_GAMES, formatKey, formatName, matchName, maxHead, suggestHeads } from './rating.js';
 import { APP_VERSION } from './version.js';
 
@@ -141,6 +141,11 @@ function rulesFor(setup, pick) {
     : { doubleIn: base.doubleIn, doubleOut: base.doubleOut };
 }
 
+function teamNames(setup, team) {
+  const list = setup.picks.filter((_, index) => index % 2 === team).map((pick) => (isGuest(setup, pick) ? pick : pickName(pick)));
+  return list.join(' and ');
+}
+
 function suggestedHeads(setup) {
   const config = setupConfigBase(setup);
   return suggestHeads(config, setup.picks.map((pick) => (isGuest(setup, pick) ? null : ladderEntry(pick)?.ratings?.[formatKey(config, rulesFor(setup, pick))] ?? null)));
@@ -187,7 +192,14 @@ function renderSetup() {
 
     h('section', { class: 'card' },
       h('h2', {}, 'Who is playing?'),
-      h('p', { class: 'muted' }, isKiller ? 'Killer has two sides. Tap in throwing order.' : 'Two to four players. Tap in throwing order.'),
+      h('p', { class: 'muted' }, 'Two to four players. Tap in throwing order.'),
+      isKiller && setup.picks.length > 2 ? h('p', { class: 'hint', id: 'teams' }, `Teams: ${teamNames(setup, 0)} against ${teamNames(setup, 1)}. Partners share marks and a score. Tap in a different order to change teams.`) : null,
+      isKiller && setup.picks.length === 3 ? h('div', { id: 'solo-turns' },
+        h('p', { class: 'status' }, `How often does ${teamNames(setup, 1)} throw?`),
+        h('div', { class: 'choices', role: 'group', 'aria-label': 'Turns for the player alone' },
+          [[2, 'Twice a round', 'After each opponent, so both sides get the same throws.'], [1, 'Once a round', 'The pair throw twice as much. Good for two weaker players against one strong one.']].map(([turns, label, note]) => h('button', {
+            type: 'button', 'aria-pressed': String(setup.soloTurns === turns), onclick: () => { setup.soloTurns = turns; update(); },
+          }, label, h('small', { class: 'rank' }, note))))) : null,
       h('div', { class: 'player-picks', role: 'group', 'aria-label': 'Players' },
         members().map((member) => {
           const at = setup.picks.indexOf(member.id);
@@ -219,7 +231,20 @@ function renderSetup() {
           update();
         },
       }, h('label', {}, 'Add a guest', guestInput), h('button', { type: 'submit' }, 'Add')),
-      h('p', { class: 'muted' }, 'Guests play but stay off the ladder.')),
+      h('p', { class: 'muted' }, 'Guests play but stay off the ladder.'),
+      setup.guests.length ? h('ul', { class: 'people', id: 'guests' }, setup.guests.map((guest) => h('li', { class: 'guest-row' },
+        h('span', {}, guest),
+        h('button', { type: 'button', 'aria-label': `Invite ${guest}`, onclick: () => shareInvite({ guest }) }, 'Invite'),
+        h('button', {
+          type: 'button', class: 'danger', 'aria-label': `Remove ${guest}`,
+          onclick: () => {
+            setup.guests = setup.guests.filter((name) => name !== guest);
+            setup.picks = setup.picks.filter((pick) => pick !== guest);
+            delete setup.playerRules[guest];
+            setup.heads = {};
+            update();
+          },
+        }, 'Remove')))) : null),
 
     setup.perPlayer && setup.picks.length ? h('section', { class: 'card' },
       h('h2', {}, 'Rules per player'),
@@ -254,8 +279,8 @@ function renderSetup() {
 function startGame() {
   const setup = store.setup;
   const problem = setup.picks.length < 2 ? 'Pick at least two players.'
-    : setup.game === 'killer' && setup.picks.length !== 2 ? 'Killer has two sides. Pick two players.'
-      : setup.picks.length > 4 ? 'Four players at most.' : null;
+    : setup.picks.length > 4 ? 'Four players at most.'
+      : setup.game === 'killer' && setup.picks.length === 3 && !setup.soloTurns ? `Choose how often ${teamNames(setup, 1)} throws.` : null;
   if (problem) {
     const element = $('setup-error');
     element.textContent = problem;
@@ -268,16 +293,19 @@ function startGame() {
     startedAt: Date.now(),
     config: {
       ...setupConfigBase(setup),
+      ...(setup.game === 'killer' && setup.picks.length === 3 ? { soloTurns: setup.soloTurns } : {}),
       sides: setup.picks.map((pick, index) => ({
         name: isGuest(setup, pick) ? pick : pickName(pick),
         userId: isGuest(setup, pick) ? null : pick,
         head: setup.heads[pick] ?? suggested?.[index] ?? 0,
         rules: rulesFor(setup, pick),
+        ...(setup.game === 'killer' && setup.picks.length > 2 ? { team: index % 2 } : {}),
       })),
     },
     events: [],
   };
   setup.heads = {};
+  setup.soloTurns = null; // asked again every game
   resetPad();
   persist();
   render();
@@ -461,16 +489,18 @@ function renderKiller() {
   const { config, events } = store.game;
   const state = replay(config, events);
   const [left, right] = state.sides;
-  const up = state.turn;
-  const rules = config.sides[up].rules ?? {};
+  const up = state.team;
+  const thrower = config.sides[state.turn];
+  const rules = thrower.rules ?? {};
+  const teamName = (team) => config.sides.filter((_, index) => teamOf(config, index) === team).map((side) => side.name).join(' and ');
   const marks = (side, row) => 'X'.repeat(side.marks[row] ?? 0);
 
   const board = h('table', { class: 'board', 'aria-label': 'Killer board' },
     h('thead', {},
       h('tr', {},
-        h('th', { class: up === 0 ? 'up' : '', colspan: 2, scope: 'col' }, config.sides[0].name),
+        h('th', { class: up === 0 ? 'up' : '', colspan: 2, scope: 'col' }, teamName(0)),
         h('th', { class: 'row-label', scope: 'col' }, ''),
-        h('th', { class: up === 1 ? 'up' : '', colspan: 2, scope: 'col' }, config.sides[1].name)),
+        h('th', { class: up === 1 ? 'up' : '', colspan: 2, scope: 'col' }, teamName(1))),
       h('tr', {},
         h('th', { class: 'row-total', colspan: 2, id: 'score-0' }, String(left.score)),
         h('th', { class: 'row-label' }, 'Score'),
@@ -509,7 +539,7 @@ function renderKiller() {
 
   return h('div', {},
     board,
-    h('div', { class: 'status' }, `${config.sides[up].name} to throw`),
+    h('div', { class: 'status' }, `${thrower.name} to throw`),
     visitBoxes(state),
     h('div', { class: 'card' }, entry),
     gameFooter(state));
@@ -523,9 +553,9 @@ function buildFinished() {
 
 function renderFinish() {
   const match = buildFinished();
-  const winner = match.sides.find((side) => side.won);
+  const winners = match.sides.filter((side) => side.won).map((side) => side.name);
   return h('section', { class: 'card' },
-    h('h2', {}, winner ? `${winner.name} wins` : 'A draw'),
+    h('h2', {}, winners.length ? `${winners.join(' and ')} ${winners.length > 1 ? 'win' : 'wins'}` : 'A draw'),
     h('p', { class: 'result-line' }, banterLine(match)),
     h('p', { class: 'score' }, scoreLine(match)),
     h('p', { class: 'muted' }, 'Check the last dart. Saving puts it on the ladder for everyone.'),
@@ -603,10 +633,9 @@ function drawCard(match) {
   }
   context.font = `600 40px ${font}`;
   y = Math.max(y + 30, 760);
-  for (const side of match.sides.slice(0, 4)) {
-    context.fillStyle = side.won ? '#7ee2a6' : '#f4efe0';
-    const value = match.config.game === 'killer' ? `${side.score} points` : `${side.remaining} left`;
-    context.fillText(`${side.name}: ${value}`.slice(0, 44), 90, y);
+  for (const row of resultRows(match).slice(0, 4)) {
+    context.fillStyle = row.won ? '#7ee2a6' : '#f4efe0';
+    context.fillText(`${row.name}: ${row.value}`.slice(0, 44), 90, y);
     y += 54;
   }
   context.fillStyle = '#8f958c';
@@ -733,25 +762,27 @@ function memberLine(member) {
 }
 
 /** One tap: make a link and open the phone's share sheet. The link also stays on screen, in case sharing is refused. */
-async function shareInvite() {
+async function shareInvite({ guest } = {}) {
   try {
     ui.invites = (await api('POST', '/api/invites', {})).invites;
   } catch (error) {
     toast(error.message);
     return;
   }
-  ui.view = 'you';
-  render();
   const { url } = ui.invites[0];
+  const showLink = () => { ui.view = 'you'; render(); };
+  if (!guest) showLink();
   try {
     if (navigator.share) {
-      await navigator.share({ title: 'Pyltjies', text: 'Come and lose at darts on Pyltjies.', url });
+      await navigator.share({ title: 'Pyltjies', text: `${guest ? `${guest}, come` : 'Come'} and lose at darts on Pyltjies.`, url });
       return;
     }
     await navigator.clipboard.writeText(url);
     toast('Invite link copied');
   } catch (error) {
-    if (error.name !== 'AbortError') toast('Your invite link is on this screen. Copy it from there.');
+    if (error.name === 'AbortError') return;
+    showLink();
+    toast('Your invite link is on this screen. Copy it from there.');
   }
 }
 

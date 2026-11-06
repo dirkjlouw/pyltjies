@@ -7,6 +7,8 @@
 //          { t: 'end' }  stop a Killer game now: the higher score wins.
 // Rules belong to each player (config.sides[i].rules), so the weaker player's doubles can count and
 // the stronger player's not. 301/501: { doubleIn, doubleOut }. Killer: { countLow, countDead }.
+// Killer has two sides. With 3 or 4 people, each player has a `team` (0 or 1): partners share marks and
+// a score, and take turns. In Killer, state.sides are those two sides and state.players the people.
 
 export const KILLER_NUMBERS = [20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10];
 export const ALL_KILLER_ROWS = [...KILLER_NUMBERS, 'D', 'T', 'B'];
@@ -138,14 +140,39 @@ function x01Total(state, config, event) {
 export const rowOpen = (side, row) => (side.marks[row] ?? 0) >= MARKS_TO_OPEN;
 export const rowDead = (state, row) => state.sides.every((side) => rowOpen(side, row));
 
+export const teamOf = (config, index) => config.sides[index].team ?? index;
+
+/**
+ * Who throws when: the sides alternate. With 2 against 1 the players agree config.soloTurns: 2 means the
+ * player alone throws after each opponent, and 1 means once a round, which handicaps a strong player.
+ */
+export function killerOrder(config) {
+  const teams = [0, 1].map((team) => config.sides.flatMap((_, index) => (teamOf(config, index) === team ? [index] : [])));
+  if (config.soloTurns === 1 && config.sides.length === 3) {
+    const [pair, solo] = teams[0].length === 2 ? teams : [teams[1], teams[0]];
+    return [pair[0], solo[0], pair[1]];
+  }
+  const rounds = Math.max(teams[0].length, teams[1].length);
+  const order = [];
+  for (let round = 0; round < rounds; round++) {
+    for (const team of teams) order.push(team[round % team.length]);
+  }
+  return order;
+}
+
 function killerStart(config) {
+  const order = killerOrder(config);
+  const heads = [0, 1].map((team) => {
+    const members = config.sides.filter((_, index) => teamOf(config, index) === team);
+    return Math.round(members.reduce((sum, side) => sum + (side.head || 0), 0) / members.length);
+  });
   return {
     game: 'killer',
     rows: ALL_KILLER_ROWS,
-    sides: config.sides.map((side) => ({
-      marks: {}, score: side.head || 0, head: side.head || 0, earned: 0, counted: 0, darts: 0, beds: 0, bedAndBreakfast: 0,
-    })),
-    turn: 0, visit: [], finished: false, winner: null, last: null,
+    sides: heads.map((head) => ({ marks: {}, score: head })),
+    players: config.sides.map(() => ({ counted: 0, darts: 0, beds: 0, bedAndBreakfast: 0 })),
+    order, position: 0, turn: order[0], team: teamOf(config, order[0]),
+    visit: [], finished: false, winner: null, last: null,
   };
 }
 
@@ -167,7 +194,7 @@ export function killerChoice(state, config, { n, m }) {
 
 /** The two ways to place a dart that has a choice, with what each would do, for the buttons. */
 export function killerOptions(state, config, { n, m }) {
-  const side = state.sides[state.turn];
+  const side = state.sides[state.team];
   return [
     { to: 'row', ...markEffect(state, side, n, m, n) },
     { to: 'bonus', ...markEffect(state, side, bonusRow(m), 1, n * m) },
@@ -190,8 +217,9 @@ export function killerTarget(state, config, { n, m, to }) {
 }
 
 function killerDart(state, config, dart) {
-  const side = state.sides[state.turn];
-  side.darts += 1;
+  const side = state.sides[state.team];
+  const player = state.players[state.turn];
+  player.darts += 1;
   state.visit.push({ n: dart.n, m: dart.m });
   const target = killerTarget(state, config, dart);
   const numberDead = dart.n >= 10 && dart.n <= 20 && rowDead(state, dart.n);
@@ -200,8 +228,7 @@ function killerDart(state, config, dart) {
     const effect = markEffect(state, side, target.row, target.marks, target.each);
     side.marks[target.row] = (side.marks[target.row] ?? 0) + effect.marks;
     side.score += effect.scored;
-    side.earned += effect.scored;
-    side.counted += effect.marks + (effect.scored > 0 ? effect.spare : 0);
+    player.counted += effect.marks + (effect.scored > 0 ? effect.spare : 0);
     state.last.marks = effect.marks;
     state.last.scored = effect.scored;
   } else if (target) {
@@ -210,12 +237,14 @@ function killerDart(state, config, dart) {
   const others = state.sides.filter((other) => other !== side);
   if (state.rows.every((row) => rowOpen(side, row)) && others.every((other) => side.score >= other.score)) {
     state.finished = true;
-    state.winner = state.turn;
+    state.winner = state.team;
     return;
   }
   if (state.visit.length === 3) {
-    noteBed(side, state.visit);
-    state.turn = (state.turn + 1) % config.sides.length;
+    noteBed(player, state.visit);
+    state.position = (state.position + 1) % state.order.length;
+    state.turn = state.order[state.position];
+    state.team = teamOf(config, state.turn);
     state.visit = [];
   }
 }
@@ -249,13 +278,22 @@ export function replay(config, events) {
 
 /** The numbers stored for each player. `stat` drives the handicap: three-dart average or marks per round. */
 export function summarize(config, state) {
-  return state.sides.map((side, index) => {
-    const base = { name: config.sides[index].name, userId: config.sides[index].userId ?? null, head: config.sides[index].head || 0, darts: side.darts, won: state.winner === index };
-    const stat = side.darts ? Math.round(((config.game === 'killer' ? side.counted : side.points) / side.darts) * 300) / 100 : 0;
-    const extras = { beds: side.beds, bedAndBreakfast: side.bedAndBreakfast };
-    if (config.game === 'killer') {
-      return { ...base, ...extras, stat, score: side.score, opened: state.rows.filter((row) => rowOpen(side, row)).length, rows: state.rows.length };
-    }
-    return { ...base, ...extras, stat, remaining: side.remaining, busts: side.busts, tons: side.tons, maxes: side.maxes, highVisit: side.highVisit };
-  });
+  if (config.game === 'killer') {
+    return state.players.map((player, index) => {
+      const team = teamOf(config, index);
+      const side = state.sides[team];
+      return {
+        name: config.sides[index].name, userId: config.sides[index].userId ?? null, head: config.sides[index].head || 0, team,
+        darts: player.darts, won: state.winner === team, beds: player.beds, bedAndBreakfast: player.bedAndBreakfast,
+        stat: player.darts ? Math.round((player.counted / player.darts) * 300) / 100 : 0,
+        score: side.score, opened: state.rows.filter((row) => rowOpen(side, row)).length, rows: state.rows.length,
+      };
+    });
+  }
+  return state.sides.map((side, index) => ({
+    name: config.sides[index].name, userId: config.sides[index].userId ?? null, head: config.sides[index].head || 0,
+    darts: side.darts, won: state.winner === index, beds: side.beds, bedAndBreakfast: side.bedAndBreakfast,
+    stat: side.darts ? Math.round((side.points / side.darts) * 300) / 100 : 0,
+    remaining: side.remaining, busts: side.busts, tons: side.tons, maxes: side.maxes, highVisit: side.highVisit,
+  }));
 }

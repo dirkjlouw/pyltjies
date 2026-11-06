@@ -251,8 +251,18 @@ export function createApp({
 
     let config;
     if (sent.game === 'killer') {
-      if (sent.sides.length !== 2) throw new HttpError(400, 'Killer is played by two sides.');
+      if (sent.sides.length < 2 || sent.sides.length > 4) throw new HttpError(400, 'Play with 2 to 4 people.');
+      if (sent.sides.length > 2) {
+        const teams = sent.sides.map((side) => side?.team);
+        if (!teams.every((team) => team === 0 || team === 1) || !teams.includes(0) || !teams.includes(1)) {
+          throw new HttpError(400, 'Killer with 3 or 4 people needs two teams.');
+        }
+      }
       config = { game: 'killer' };
+      if (sent.sides.length === 3) {
+        if (sent.soloTurns !== 1 && sent.soloTurns !== 2) throw new HttpError(400, 'Say how often the player alone throws.');
+        config.soloTurns = sent.soloTurns;
+      }
     } else if (sent.game === 'x01' && (sent.start === 301 || sent.start === 501)) {
       if (sent.sides.length < 2 || sent.sides.length > 4) throw new HttpError(400, 'Play with 2 to 4 people.');
       config = { game: 'x01', start: sent.start };
@@ -265,6 +275,7 @@ export function createApp({
     config.sides = sent.sides.map((side) => {
       if (!isObject(side)) throw new HttpError(400, 'That game has a bad player.');
       const head = side.head ?? 0;
+      const team = config.game === 'killer' && sent.sides.length > 2 ? { team: side.team } : {};
       const given = isObject(side.rules) ? side.rules : {};
       const rules = config.game === 'killer'
         ? { countLow: given.countLow === true, countDead: given.countDead === true }
@@ -273,13 +284,13 @@ export function createApp({
       if (side.userId === null || side.userId === undefined) {
         const name = cleanName(side.name);
         if (!name) throw new HttpError(400, 'A guest needs a name.');
-        return { name, userId: null, head, rules };
+        return { name, userId: null, head, rules, ...team };
       }
       const user = q.userById.get(String(side.userId));
       if (!user) throw new HttpError(400, "A player in that game isn't in the league.");
       if (seen.has(user.id)) throw new HttpError(400, 'A player is in that game twice.');
       seen.add(user.id);
-      return { name: user.name, userId: user.id, head, rules };
+      return { name: user.name, userId: user.id, head, rules, ...team };
     });
 
     let state;

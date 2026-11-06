@@ -292,3 +292,108 @@ for (const width of [340, 390, 560, 600, 800, 1400]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
+
+test('a guest can be added, invited and removed', async ({ page, context }) => {
+  await page.addInitScript(() => {
+    window.shared = [];
+    navigator.share = async (data) => { window.shared.push(data); };
+  });
+  await twoPlayers(context, page);
+  const name = uniqueName('Rudine');
+  await page.getByLabel('Add a guest').fill(name);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByRole('group', { name: 'Players' })).toContainText(`3. ${name} (guest)`);
+
+  await page.getByRole('button', { name: `Invite ${name}` }).click();
+  await expect.poll(() => page.evaluate(() => window.shared.length)).toBe(1);
+  const invite = await page.evaluate(() => window.shared[0]);
+  expect(invite.url).toContain('?invite=');
+  expect(invite.text).toContain(name);
+  await expect(page.getByRole('heading', { name: 'New game' })).toBeVisible();
+
+  await page.getByRole('button', { name: `Remove ${name}` }).click();
+  await expect(page.getByRole('group', { name: 'Players' })).not.toContainText(name);
+  await expect(page.locator('#guests')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('group', { name: 'Players' })).not.toContainText(name);
+});
+
+test('three players take turns in 501', async ({ page, context }) => {
+  const { meName, themName } = await twoPlayers(context, page);
+  const third = uniqueName('Jo');
+  await page.getByLabel('Add a guest').fill(third);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await chooseRules(page, '501', { 'Open on a double': false, 'Finish on a double': false });
+  await page.getByRole('button', { name: 'Start game' }).click();
+  for (const [name, next] of [[meName, themName], [themName, third], [third, meName]]) {
+    await expect(page.locator('.status')).toContainText(`${name} to throw`);
+    await page.getByRole('button', { name: 'Three-dart total' }).click();
+    await page.locator('#total-input').fill('60');
+    await page.getByRole('button', { name: 'Score it' }).click();
+    await expect(page.locator(`[data-player="${name}"] .left`)).toHaveText('441');
+    await expect(page.locator('.status')).toContainText(`${next} to throw`);
+  }
+});
+
+test('Killer with four players: teams from throwing order, sharing the board', async ({ page, context }) => {
+  const { meName, themName } = await twoPlayers(context, page);
+  const three = uniqueName('Jo');
+  const four = uniqueName('Ben');
+  for (const guest of [three, four]) {
+    await page.getByLabel('Add a guest').fill(guest);
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+  }
+  await chooseRules(page, 'Killer', { '1 to 9 count on D and T': true, 'Dead numbers count on D and T': true });
+  await expect(page.locator('#teams')).toContainText(`${meName} and ${three} against ${themName} and ${four}`);
+  await page.getByRole('button', { name: 'Start game' }).click();
+
+  const heads = page.locator('.board thead tr').first().locator('th');
+  await expect(heads.first()).toHaveText(`${meName} and ${three}`);
+  await expect(heads.last()).toHaveText(`${themName} and ${four}`);
+  await expect(page.locator('.status')).toContainText(`${meName} to throw`);
+  await dart(page, '20', 'Treble');
+  await place(page, '20 row');
+  await dart(page, 'Miss');
+  await dart(page, 'Miss');
+  await expect(page.locator('.status')).toContainText(`${themName} to throw`);
+  await dart(page, 'Miss');
+  await dart(page, 'Miss');
+  await dart(page, 'Miss');
+  await expect(page.locator('.status')).toContainText(`${three} to throw`);
+  await dart(page, '20');
+  await expect(page.locator('#score-0')).toHaveText('20');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'End now' }).click();
+  await expect(page.getByRole('heading', { name: `${meName} and ${three} win` })).toBeVisible();
+  await page.getByRole('button', { name: 'Save result' }).click();
+  await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible();
+  await expect(page.locator('.score')).toContainText(`${meName} and ${three} 20`);
+  await expect(page.locator('#waiting')).toHaveCount(0);
+});
+
+test('Killer 2 against 1 asks how often the player alone throws', async ({ page, context }) => {
+  const { meName, themName } = await twoPlayers(context, page);
+  const third = uniqueName('Jo');
+  await page.getByLabel('Add a guest').fill(third);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await chooseRules(page, 'Killer', { '1 to 9 count on D and T': true, 'Dead numbers count on D and T': true });
+  await expect(page.locator('#teams')).toContainText(`${meName} and ${third} against ${themName}`);
+
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await expect(page.locator('#setup-error')).toContainText(`how often ${themName} throws`);
+
+  await page.getByRole('group', { name: 'Turns for the player alone' }).getByRole('button', { name: /^Once a round/ }).click();
+  await page.getByRole('button', { name: 'Start game' }).click();
+  const throwers = [meName, themName, third, meName];
+  for (const name of throwers) {
+    await expect(page.locator('.status')).toContainText(`${name} to throw`);
+    await dart(page, 'Miss');
+    await dart(page, 'Miss');
+    await dart(page, 'Miss');
+  }
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'End now' }).click();
+  await page.getByRole('button', { name: 'Save result' }).click();
+  await expect(page.locator('#waiting')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible();
+});

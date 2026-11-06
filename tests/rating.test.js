@@ -125,6 +125,16 @@ test('banter picks up the big moments', () => {
   assert.match(banterLine(match('1', killer(), [side('a', 'Dirk', 2, false), side('b', 'Sam', 2, false)])), /drew/);
 });
 
+test('Killer teams read as teams in the result and banter', () => {
+  const played = match('t', killer(), [
+    { name: 'Dirk', team: 0, score: 100, won: true }, { name: 'Sam', team: 1, score: 40, won: false },
+    { name: 'Jo', team: 0, score: 100, won: true }, { name: 'Ben', team: 1, score: 40, won: false },
+  ]);
+  assert.equal(scoreLine(played), 'Dirk and Jo 100, Sam and Ben 40');
+  assert.doesNotMatch(banterLine(played), /[{}]/);
+  assert.match(banterLine(played), /Dirk and Jo|Sam and Ben/);
+});
+
 test('every banter line fills in the names, across many matches', () => {
   for (let i = 0; i < 300; i++) {
     const remaining = [100, 10, 400][i % 3];

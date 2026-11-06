@@ -10,7 +10,7 @@ Everyone can see who is in the league and when they joined, with a New tag for t
 
 You stay signed in for up to 400 days on each browser. On an iPhone, the home screen app and Safari keep separate sign-ins, so you sign in once in each. Games and results are the same in both once saved. A game still in play lives only where it was started.
 
-Guests are name-only players. They appear in the match log and stay off the ladder and ratings.
+Guests are name-only players. They appear in the match log and stay off the ladder and ratings. A guest can be removed from the setup list, which leaves saved games as they are, or sent an invite link. Joining doesn't yet link their old guest games to the new account.
 
 ## Entering darts
 
@@ -42,6 +42,7 @@ The game on the owner's scoreboard. It isn't the lives-based game of the same na
   - *1 to 9 count on D and T:* a double or treble of 1 to 9 is one mark there.
   - *Dead numbers count on D and T:* a double or treble of a dead number is one mark there.
 - **Both toggles off:** only doubles and trebles of live numbers can fill D and T.
+- **Teams with 3 or 4 people:** throwing order sets the teams, players 1 and 3 against 2 and 4. Partners share marks and a score and take turns. With 3 people, player 2 is alone, and setup asks how often they throw, every game: twice a round (1, 2, 3, 2) so both sides get the same throws, or once a round (1, 2, 3), which handicaps one strong player against two weaker ones. A team's head start is the average of its players'. Rules, ratings and league points stay per person, and each player is rated on their own darts.
 - **Winning:** a side wins as soon as every row is open and it's level or ahead (our own default, the owner skipped this question). Anyone can end the game early, and the higher score wins. Level is a draw.
 
 ## Handicap

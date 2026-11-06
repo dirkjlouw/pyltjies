@@ -163,7 +163,8 @@ test('games that do not add up are refused', async () => {
   assert.equal((await send({ config: { ...config, sides: [{ userId: ids[0], head: 181 }, { userId: ids[1], head: 0 }] } })).status, 400, 'head start over the ceiling');
   assert.equal((await send({ config: { ...config, sides: [{ userId: ids[0] }, { userId: ids[0] }] } })).status, 400, 'same player twice');
   assert.equal((await send({ config: { ...config, sides: [{ userId: 'ghost' }, { userId: ids[1] }] } })).status, 400, 'not in the league');
-  assert.equal((await send({ config: { game: 'killer', sides: [{ userId: ids[0] }, { userId: ids[1] }, { name: 'Guest' }] }, events: [{ t: 'end' }] })).status, 400, 'three in Killer');
+  assert.equal((await send({ config: { game: 'killer', sides: [{ userId: ids[0] }, { userId: ids[1] }, { name: 'Guest' }] }, events: [{ t: 'end' }] })).status, 400, 'three in Killer with no teams');
+  assert.equal((await send({ config: { game: 'killer', sides: [{ userId: ids[0], team: 0 }, { userId: ids[1], team: 0 }, { name: 'Guest', team: 0 }] }, events: [{ t: 'end' }] })).status, 400, 'everyone on one team');
   assert.equal((await owner.call('GET', '/api/league')).data.matches.length, 0);
 });
 
@@ -222,6 +223,44 @@ test('each player has their own rules, and is rated and paid under them', async 
   assert.equal(data.ladder[0].points, 2);
   assert.equal(data.formats['301'], '301, straight in, straight out');
   assert.equal(data.formats['301-do'], '301, straight in, double out');
+});
+
+test('Killer teams are saved per person, and partners share the result', async () => {
+  const { join, friend } = await start();
+  const owner = await join(OWNER, 'Dirk');
+  const sam = await friend(owner.call, 'sam@example.com', 'Sam');
+  const jo = await friend(owner.call, 'jo@example.com', 'Jo');
+  const ben = await friend(owner.call, 'ben@example.com', 'Ben');
+  const game = {
+    id: uuid(),
+    playedAt: Date.now(),
+    config: { game: 'killer', sides: [
+      { userId: owner.user.id, team: 0, head: 20, rules: { countLow: true } }, { userId: sam.user.id, team: 1 },
+      { userId: jo.user.id, team: 0 }, { userId: ben.user.id, team: 1 },
+    ] },
+    events: [{ t: 'end' }],
+  };
+  assert.equal((await owner.call('POST', '/api/matches', game)).status, 200);
+  const { data } = await owner.call('GET', '/api/league');
+  assert.deepEqual(data.matches[0].sides.map((side) => side.won), [true, false, true, false]);
+  assert.equal(data.matches[0].sides[2].score, 10, 'a team head start is the average');
+  const dirk = data.ladder.find((player) => player.name === 'Dirk');
+  assert.equal(dirk.points, 4);
+  assert.equal(dirk.wins, 1);
+  assert.deepEqual(Object.keys(dirk.rivals).length, 2, 'partners are not rivals');
+  assert.equal(data.ladder.find((player) => player.name === 'Jo').points, 5);
+});
+
+test('Killer 2 against 1 must say how often the player alone throws', async () => {
+  const { join, friend } = await start();
+  const owner = await join(OWNER, 'Dirk');
+  const sam = await friend(owner.call, 'sam@example.com', 'Sam');
+  const sides = [{ userId: owner.user.id, team: 0, head: 10 }, { userId: sam.user.id, team: 1 }, { name: 'Guest', team: 0 }];
+  const game = (over) => ({ id: uuid(), playedAt: Date.now(), events: [{ t: 'end' }], config: { game: 'killer', sides, ...over } });
+  assert.equal((await owner.call('POST', '/api/matches', game({}))).status, 400);
+  assert.equal((await owner.call('POST', '/api/matches', game({ soloTurns: 3 }))).status, 400);
+  assert.equal((await owner.call('POST', '/api/matches', game({ soloTurns: 1 }))).status, 200);
+  assert.equal((await owner.call('GET', '/api/league')).data.matches[0].config.soloTurns, 1);
 });
 
 test('banter comments show for everyone, and email addresses never do', async () => {
