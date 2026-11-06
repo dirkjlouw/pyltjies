@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { banterLine, scoreLine, shareText } from '../app/banter.js';
+import { banterLine, ladderRank, scoreLine, shareText } from '../app/banter.js';
 import { buildLeague, formatKey, formatName, matchName, maxHead, ratingFrom, suggestHeads, winPoints } from '../app/rating.js';
 
 // A match config with the same rules for both players, plus those rules for the single-format helpers.
@@ -123,4 +123,22 @@ test('banter picks up the big moments', () => {
   assert.match(banterLine(base({ beds: 1 })), /Three in a bed for Dirk/);
   assert.match(banterLine(match('1', x01(), [side('a', 'Dirk', 50, true), side('b', 'Sam', 40, false, { busts: 4 })])), /Sam bust 4 times/);
   assert.match(banterLine(match('1', killer(), [side('a', 'Dirk', 2, false), side('b', 'Sam', 2, false)])), /drew/);
+});
+
+test('every banter line fills in the names, across many matches', () => {
+  for (let i = 0; i < 300; i++) {
+    const remaining = [100, 10, 400][i % 3];
+    const line = banterLine(match(`m${i}`, x01(), [side('a', 'Dirk', 50, true), side('b', 'Sam', 40, false, { remaining })]));
+    assert.doesNotMatch(line, /[{}]/);
+    assert.match(line, /Dirk|Sam/);
+  }
+});
+
+test('ladder ranks start at sheriff, and last place is always the greenhorn', () => {
+  assert.equal(ladderRank(0, 5), 'Sheriff');
+  assert.equal(ladderRank(1, 5), 'Deputy');
+  assert.equal(ladderRank(4, 5), 'Greenhorn');
+  assert.equal(ladderRank(1, 2), 'Greenhorn');
+  assert.equal(ladderRank(0, 1), 'Sheriff');
+  assert.equal(ladderRank(8, 12), 'Stable hand');
 });

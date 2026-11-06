@@ -1,39 +1,50 @@
-/* Pyltjies: the chalkboard on the cupboard door. Green and red come from the dartboard. */
+/* Pyltjies: an old saloon with a 386 behind the bar. DOS header and menu, snooker baize, mahogany,
+   brass and chalk. Text sitting directly on the baize uses --page-ink, everything else sits on a card. */
 :root {
   color-scheme: light dark;
-  --header: #10201a;
-  --header-ink: #f4efe0;
-  --bg: #f1eee3;
-  --surface: #fffdf6;
-  --ink: #16211c;
-  --muted: #55615a;
-  --line: #d9d4c3;
-  --line-strong: #8c9188;
-  --green: #17693a;
-  --green-ink: #ffffff;
-  --green-soft: #dcefe2;
-  --red: #b3182e;
-  --red-soft: #f8e1e3;
+  --dos-blue: #0000aa;
+  --dos-white: #ffffff;
+  --dos-yellow: #ffff55;
+  --dos-cyan: #55ffff;
+  --dos-grey: #aaaaaa;
+  --dos-black: #000000;
+  --baize: #0f5132;
+  --baize-deep: #0a3d25;
+  --page-ink: #f7f1dc;
+  --page-muted: #cfe0d2;
+  --wood: #4a2511;
+  --brass: #d9a93a;
+  --brass-ink: #1d1405;
+  --surface: #fbf5e3;
+  --ink: #21160c;
+  --muted: #5c4d3c;
+  --line: #d8ccb0;
+  --line-strong: #7d6a50;
+  --field: #f3ead0;
+  --red: #a3172a;
+  --red-soft: #f8e1e0;
+  --hint: #e4efdc;
   --board: #141a18;
   --chalk: #f4efe0;
-  --chalk-dim: #8f958c;
+  --chalk-dim: #a5aba1;
   --focus: #2563eb;
+  --mono: "Perfect DOS VGA 437", "Px437 IBM VGA 8x16", ui-monospace, Menlo, Consolas, "Courier New", monospace;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d1412;
-    --surface: #18211e;
-    --ink: #eee9da;
-    --muted: #aab3ab;
-    --line: #2d3834;
-    --line-strong: #5e6b65;
-    --green: #4cc47c;
-    --green-ink: #06170d;
-    --green-soft: #173425;
-    --red: #f4717f;
-    --red-soft: #3b1a1f;
+    --baize: #0a3a24;
+    --baize-deep: #062617;
+    --surface: #2a1c12;
+    --ink: #f4ead2;
+    --muted: #c9b99d;
+    --line: #4d3826;
+    --line-strong: #93795a;
+    --field: #1d130b;
+    --red: #ff8f98;
+    --red-soft: #47191f;
+    --hint: #173425;
     --focus: #60a5fa;
   }
 }
@@ -43,7 +54,7 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: radial-gradient(ellipse at 50% 20%, var(--baize), var(--baize-deep)) fixed var(--baize-deep);
   color: var(--ink);
   font: 16px/1.45 var(--font);
   -webkit-text-size-adjust: 100%;
@@ -51,32 +62,38 @@ body {
   touch-action: manipulation;
 }
 
+/* The 386 DOS screen. Fixed colours, the same in light and dark mode. */
 .top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
-  background: var(--header);
-  color: var(--header-ink);
+  padding: calc(env(safe-area-inset-top) + 8px) 10px 8px;
+  background: var(--dos-blue);
+  color: var(--dos-white);
+  font-family: var(--mono);
 }
-.top h1 { margin: 0; font-size: 20px; font-weight: 700; }
-.tagline { font-size: 13px; opacity: 0.8; }
-.who { margin-left: auto; font-size: 14px; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dos-frame { max-width: 540px; margin: 0 auto; padding: 4px 10px; border: 4px double var(--dos-white); }
+.dos-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.prompt { font-size: 15px; color: var(--dos-cyan); white-space: nowrap; }
+.top h1 { margin: 0; font: 700 22px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--dos-yellow); }
+.cursor { flex: none; align-self: flex-end; width: 13px; height: 4px; margin: 0 0 5px -4px; background: var(--dos-white); animation: blink 1.06s infinite; }
+@keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+.tagline { font-size: 14px; }
+.who { margin-left: auto; font-size: 14px; color: var(--dos-cyan); max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who::before { content: "USER:"; margin-right: 0.5em; color: var(--dos-grey); }
 
 main { max-width: 560px; margin: 0 auto; padding: 12px 16px 24px; }
 h2 { margin: 0 0 8px; font-size: 20px; }
 h3 { margin: 16px 0 6px; font-size: 16px; }
 p { margin: 0 0 8px; }
 .muted { color: var(--muted); font-size: 14px; }
-.foot { text-align: center; color: var(--muted); font-size: 13px; padding: 0 16px calc(env(safe-area-inset-bottom) + 16px); }
+.foot { text-align: center; color: var(--page-muted); font-size: 13px; padding: 0 16px calc(env(safe-area-inset-bottom) + 16px); }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.card { background: var(--surface); border: 3px solid var(--wood); border-radius: 10px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 6px rgb(0 0 0 / 35%); }
 
 label { display: block; margin: 8px 0; font-weight: 600; font-size: 14px; }
 input[type="text"], input[type="email"], input[type="number"], select, textarea {
   display: block; width: 100%; margin-top: 4px; padding: 10px 12px; min-height: 44px;
   font: inherit; font-size: 16px; font-weight: 400; color: var(--ink);
-  background: var(--bg); border: 1px solid var(--line-strong); border-radius: 8px;
+  background: var(--field); border: 1px solid var(--line-strong); border-radius: 8px;
 }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
@@ -85,24 +102,24 @@ button {
   background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; cursor: pointer;
 }
 button:disabled { opacity: 0.4; cursor: default; }
-button.primary { background: var(--green); border-color: var(--green); color: var(--green-ink); }
-button.quiet { background: transparent; }
-button.danger { color: var(--red); border-color: var(--red); background: transparent; }
-button[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: var(--green-ink); }
+button.primary { background: var(--brass); border-color: var(--wood); color: var(--brass-ink); }
+button.danger { color: var(--red); border-color: var(--red); }
+button[aria-pressed="true"] { background: var(--brass); border-color: var(--wood); color: var(--brass-ink); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .actions > .primary { flex: 1 1 auto; }
 
 .notice { background: var(--red-soft); color: var(--ink); border-left: 4px solid var(--red); padding: 8px 10px; border-radius: 6px; font-size: 14px; }
-.hint { background: var(--green-soft); border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+.hint { background: var(--hint); border-radius: 6px; padding: 8px 10px; font-size: 14px; }
 
-.nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
-.nav button { padding: 6px 2px; font-size: 14px; }
-.nav button[aria-current="page"] { background: var(--green); border-color: var(--green); color: var(--green-ink); }
+/* The DOS menu bar. Colours stay fixed in dark mode, like the header. */
+.nav { display: grid; grid-template-columns: repeat(4, 1fr); margin: -12px -16px 12px; background: var(--dos-grey); border-bottom: 3px solid var(--wood); }
+.nav button { padding: 6px 2px; font: 700 15px var(--mono); color: var(--dos-black); background: transparent; border: 0; border-radius: 0; }
+.nav button[aria-current="page"] { background: var(--dos-blue); color: var(--dos-yellow); }
 
 .segments { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
 
 .toggle { display: flex; align-items: flex-start; gap: 10px; font-weight: 400; margin: 10px 0; }
-.toggle input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--green); }
+.toggle input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--wood); }
 .toggle small { display: block; color: var(--muted); font-size: 13px; }
 
 .player-picks { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -115,27 +132,30 @@ button[aria-pressed="true"] { background: var(--green); border-color: var(--gree
 
 /* 301 and 501 */
 .players { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); margin-bottom: 10px; }
-.player { background: var(--surface); border: 2px solid var(--line); border-radius: 12px; padding: 8px 10px; min-width: 0; }
-.player.up { border-color: var(--green); background: var(--green-soft); }
+/* Scores are chalked on a slate in a wooden frame. */
+.player { background: var(--board); color: var(--chalk); border: 3px solid var(--wood); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.player.up { border-color: var(--brass); box-shadow: 0 0 0 2px var(--brass); }
 .player .name { font-weight: 700; overflow-wrap: anywhere; }
-.player .left { font-size: 40px; line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums; }
-.player .sub { font-size: 12px; color: var(--muted); }
+.player .left { font: 700 42px/1.1 var(--mono); }
+.player .sub { font-size: 12px; color: var(--chalk-dim); }
 
 .visit { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
-.visit span { text-align: center; padding: 6px 2px; border: 1px dashed var(--line-strong); border-radius: 8px; font-weight: 700; font-size: 14px; min-height: 34px; }
-.status { font-weight: 700; margin-bottom: 8px; }
+.visit span { color: var(--page-ink); text-align: center; padding: 6px 2px; border: 1px dashed var(--page-muted); border-radius: 8px; font-weight: 700; font-size: 14px; min-height: 34px; }
+.status { font-weight: 700; margin-bottom: 8px; color: var(--page-ink); }
+.card .status { color: var(--ink); }
 
 .pad { display: grid; gap: 6px; }
 .pad-row { display: grid; gap: 6px; grid-template-columns: repeat(3, 1fr); }
+.choices { display: grid; gap: 6px; }
 .pad-numbers { display: grid; gap: 6px; grid-template-columns: repeat(5, 1fr); }
 .pad-numbers button { padding: 2px 0; min-height: 44px; font-size: 18px; font-variant-numeric: tabular-nums; }
 .pad-numbers button.dead { opacity: 0.45; text-decoration: line-through; }
 
 /* Killer: the board from the cupboard door */
-.board { width: 100%; border-collapse: collapse; background: var(--board); color: var(--chalk); border-radius: 10px; overflow: hidden; margin-bottom: 10px; table-layout: fixed; }
+.board { width: 100%; border: 4px solid var(--wood); border-collapse: collapse; background: var(--board); color: var(--chalk); border-radius: 10px; overflow: hidden; margin-bottom: 10px; table-layout: fixed; }
 .board th, .board td { border: 1px solid var(--chalk-dim); text-align: center; padding: 0 2px; font-variant-numeric: tabular-nums; }
 .board thead th { font-size: 13px; padding: 5px 2px; overflow-wrap: anywhere; }
-.board thead th.up { background: var(--chalk); color: var(--board); }
+.board thead th.up { background: var(--brass); color: var(--brass-ink); }
 .board .row-label { width: 15%; font-weight: 800; font-size: 14px; }
 .board .row-total { font-size: 20px; font-weight: 800; }
 .board td.marks { height: 21px; letter-spacing: 3px; font-weight: 800; font-size: 15px; }
@@ -147,6 +167,21 @@ button[aria-pressed="true"] { background: var(--green); border-color: var(--gree
 .ladder th, .ladder td { padding: 8px 4px; border-bottom: 1px solid var(--line); text-align: right; }
 .ladder th:first-child, .ladder td:first-child, .ladder th:nth-child(2), .ladder td:nth-child(2) { text-align: left; }
 .ladder th { font-size: 13px; color: var(--muted); }
+/* League positions are snooker balls, black on top and worth the most. */
+.ball {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  font-size: 13px; font-weight: 800; color: #fff;
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 55%), transparent 38%), var(--ball);
+  box-shadow: inset -2px -3px 5px rgb(0 0 0 / 40%);
+}
+.rank { display: block; font-size: 12px; color: var(--muted); }
+.ball-1 { --ball: #111; }
+.ball-2 { --ball: #c9487f; }
+.ball-3 { --ball: #1a4fb5; }
+.ball-4 { --ball: #6b3d1c; }
+.ball-5 { --ball: #1b7d3c; }
+.ball-6 { --ball: #d9ae12; color: #1d1405; }
+.ball-7 { --ball: #b81d24; }
 .match .meta { font-size: 13px; color: var(--muted); }
 .match .line { font-weight: 700; margin: 4px 0; }
 .match .score { font-size: 14px; }
@@ -162,5 +197,5 @@ button[aria-pressed="true"] { background: var(--green); border-color: var(--gree
   /* At the top, and never in the way of a tap: the pad is at the bottom and players tap fast. */
   position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 12px); transform: translateX(-50%); pointer-events: none;
   width: max-content; max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: 999px;
-  background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 600; z-index: 10;
+  background: var(--dos-blue); color: var(--dos-yellow); font: 700 14px var(--mono); border: 2px solid var(--dos-white); font-weight: 600; z-index: 10;
 }

@@ -1,7 +1,7 @@
 // The app's screens. A game in progress lives on this phone, so it survives a closed app or no
 // signal. Finished games wait in an outbox until the server has them.
-import { banterLine, scoreLine, shareText, statLabel } from './banter.js';
-import { ALL_KILLER_ROWS, KILLER_NUMBERS, dartLabel, killerChoice, killerTarget, possibleTotal, replay, rowDead, rowOpen, summarize } from './games.js';
+import { banterLine, ladderRank, scoreLine, shareText, statLabel } from './banter.js';
+import { ALL_KILLER_ROWS, KILLER_NUMBERS, dartLabel, killerChoice, killerOptions, killerTarget, possibleTotal, replay, rowDead, rowOpen, summarize } from './games.js';
 import { MIN_GAMES, formatKey, formatName, matchName, maxHead, suggestHeads } from './rating.js';
 import { APP_VERSION } from './version.js';
 
@@ -158,7 +158,6 @@ function renderSetup() {
     ? [
       toggle('countLow', '1 to 9 count on D and T', 'A double or treble of 1 to 9 is a mark on D or T.', holder),
       toggle('countDead', 'Dead numbers count on D and T', 'A double or treble of a number closed by both sides is a mark on D or T.', holder),
-      !holder.countLow && !holder.countDead ? h('p', { class: 'hint' }, 'With both off, a live double or treble can go on its number or on D or T. The thrower chooses each time.') : null,
     ]
     : [
       toggle('doubleIn', 'Open on a double', 'Nothing counts until a double. The inner bull is a double.', holder),
@@ -480,12 +479,17 @@ function renderKiller() {
   let entry;
   if (ui.placing) {
     const dart = ui.placing;
-    const bonus = dart.m === 2 ? 'D' : 'T';
+    const effectText = ({ marks: added, scored }) => [
+      added ? `${added} ${added === 1 ? 'mark' : 'marks'}` : null,
+      scored ? `${scored} points` : null,
+    ].filter(Boolean).join(' and ') || 'nothing';
     entry = h('div', {},
       h('p', { class: 'status' }, `Where does ${dartLabel(dart)} go?`),
-      h('div', { class: 'pad-row' },
-        h('button', { type: 'button', onclick: () => addEvent({ t: 'dart', n: dart.n, m: dart.m }) }, `${dart.n} row`),
-        h('button', { type: 'button', onclick: () => addEvent({ t: 'dart', n: dart.n, m: dart.m, to: 'bonus' }) }, `${bonus} row`),
+      h('div', { class: 'choices' },
+        killerOptions(state, config, dart).map((option) => h('button', {
+          type: 'button',
+          onclick: () => addEvent(option.to === 'bonus' ? { t: 'dart', n: dart.n, m: dart.m, to: 'bonus' } : { t: 'dart', n: dart.n, m: dart.m }),
+        }, `${option.row} row: ${effectText(option)}`)),
         h('button', { type: 'button', class: 'quiet', onclick: () => { ui.placing = null; render(); } }, 'Back')));
   } else {
     const numberButton = (n) => {
@@ -695,7 +699,7 @@ function renderLadder() {
       h('table', { class: 'ladder', id: 'ladder' },
         h('thead', {}, h('tr', {}, ['#', 'Player', 'Pts', 'W', 'L', 'D'].map((label) => h('th', { scope: 'col' }, label)))),
         h('tbody', {}, ladder.map((player, index) => h('tr', {},
-          h('td', {}, String(index + 1)), h('td', {}, `${player.name}${player.id === me.id ? ' (you)' : ''}`),
+          h('td', {}, h('span', { class: `ball ball-${Math.min(index + 1, 7)}` }, String(index + 1))), h('td', {}, `${player.name}${player.id === me.id ? ' (you)' : ''}`, h('small', { class: 'rank' }, ladderRank(index, ladder.length))),
           h('td', {}, String(player.points)), h('td', {}, String(player.wins)), h('td', {}, String(player.losses)), h('td', {}, String(player.draws)))))),
       h('p', { class: 'muted' }, 'A win scores more under harder rules, using the rules the winner played.')),
     mine && Object.keys(mine.rivals).length ? h('section', { class: 'card' },

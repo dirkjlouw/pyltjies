@@ -35,10 +35,15 @@ export async function lastCode(email) {
 }
 
 /** Tests share one league, so each uses unique names. */
-export const uniqueName = (base) => `${base} ${crypto.randomUUID().slice(0, 4)}`;
+export const uniqueName = (base) => `${base} ${crypto.randomUUID().slice(0, 8)}`;
 
 export async function dart(page, label, multiplier = 'Single') {
   await page.getByRole('group', { name: 'Multiplier' }).getByRole('button', { name: multiplier, exact: true }).click();
   const pad = page.locator('.pad');
   await pad.getByRole('button', { name: String(label), exact: true }).first().click();
+}
+
+/** A Killer double or treble that asks where it goes: `row` is the start of the button, such as '20 row' or 'T row'. */
+export async function place(page, row) {
+  await page.locator('.choices').getByRole('button', { name: new RegExp(`^${row}:`) }).click();
 }

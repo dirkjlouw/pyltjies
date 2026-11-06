@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { dart, seedUser, uniqueName } from './helpers.js';
+import { dart, place, seedUser, uniqueName } from './helpers.js';
 
 test.use({ serviceWorkers: 'block' });
 
@@ -119,6 +119,7 @@ test('Killer: the board marks, opens, scores, closes and goes dead', async ({ pa
   const marks = (name, side) => row(name).locator(`td[data-side="${side}"]`);
 
   await dart(page, '20', 'Treble');
+  await place(page, '20 row');
   await expect(marks(20, 0)).toHaveText('XXX');
   await dart(page, '20');
   await expect(page.locator('#score-0')).toHaveText('20');
@@ -127,6 +128,7 @@ test('Killer: the board marks, opens, scores, closes and goes dead', async ({ pa
   await expect(page.locator('.status')).toContainText(themName);
 
   await dart(page, '20', 'Treble');
+  await place(page, '20 row');
   await expect(marks(20, 1)).toHaveText('XXX');
   await expect(row(20)).toHaveClass(/dead/);
   await dart(page, 'Miss');
@@ -147,22 +149,21 @@ test('Killer: per-player rules, so his doubles count and mine place on a row', a
   const theirs = page.locator(`[data-rules-for="${themName}"]`);
   await mine.getByLabel('1 to 9 count on D and T').uncheck();
   await page.locator(`[data-rules-for="${meName}"]`).getByLabel('Dead numbers count on D and T').uncheck();
-  await expect(page.locator(`[data-rules-for="${meName}"] .hint`)).toContainText('thrower chooses');
   await expect(page.locator(`[data-rules-for="${themName}"]`).getByLabel('1 to 9 count on D and T')).toBeChecked();
   await expect(theirs).toBeVisible();
   await page.getByRole('button', { name: 'Start game' }).click();
 
   const marks = (name, side) => page.locator(`.board tr[data-row="${name}"] td[data-side="${side}"]`);
 
-  // Mine: no 1 to 9 buttons, and a live treble asks where it goes.
+  // Mine: no 1 to 9 buttons.
   await page.getByRole('group', { name: 'Multiplier' }).getByRole('button', { name: 'Double', exact: true }).click();
   await expect(page.locator('.pad').getByRole('button', { name: '5', exact: true })).toHaveCount(0);
   await dart(page, '20', 'Treble');
-  await page.getByRole('button', { name: 'T row' }).click();
+  await place(page, 'T row');
   await expect(marks('T', 0)).toHaveText('X');
   await expect(marks(20, 0)).toHaveText('');
   await dart(page, '20', 'Treble');
-  await page.getByRole('button', { name: '20 row' }).click();
+  await place(page, '20 row');
   await expect(marks(20, 0)).toHaveText('XXX');
   await dart(page, 'Miss');
 
@@ -178,6 +179,7 @@ test('Killer: the end-now button gives it to the higher score', async ({ page, c
   await chooseRules(page, 'Killer', { '1 to 9 count on D and T': true, 'Dead numbers count on D and T': true });
   await page.getByRole('button', { name: 'Start game' }).click();
   await dart(page, '20', 'Treble');
+  await place(page, '20 row');
   await dart(page, '20');
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'End now' }).click();
@@ -237,4 +239,39 @@ test('the game screen fits a phone with no sideways scrolling', async ({ page, c
   await page.getByRole('button', { name: 'Start game' }).click();
   const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
   expect(fits).toBe(true);
+});
+
+test('the saloon look: DOS header and menu, snooker ball ranks, nothing unreadable', async ({ page, context }) => {
+  const { meName } = await twoPlayers(context, page);
+  await expect(page.locator('.prompt')).toHaveText('C:\\DARTS>');
+  await expect(page.locator('#who')).toHaveText(meName);
+  await expect(page.locator('h1')).toHaveCSS('color', 'rgb(255, 255, 85)');
+  await expect(page.locator('.top')).toHaveCSS('background-color', 'rgb(0, 0, 170)');
+  await nav(page).getByRole('button', { name: 'Ladder' }).click();
+  const firstBall = page.locator('#ladder .ball').first();
+  await expect(firstBall).toHaveText('1');
+  await expect(firstBall).toHaveClass(/ball-1/);
+  await expect(page.locator('#ladder .rank').first()).toHaveText('Sheriff');
+  const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+  expect(fits).toBe(true);
+});
+
+test('Killer: the choice shows what each option would do', async ({ page, context }) => {
+  await twoPlayers(context, page);
+  await chooseRules(page, 'Killer', { '1 to 9 count on D and T': false, 'Dead numbers count on D and T': false });
+  await page.getByRole('button', { name: 'Start game' }).click();
+  const choices = page.locator('.choices');
+
+  await dart(page, '18', 'Treble');
+  await expect(choices).toContainText('18 row: 3 marks');
+  await expect(choices).toContainText('T row: 1 mark');
+  await choices.getByRole('button', { name: 'Back' }).click();
+  await expect(choices).toHaveCount(0);
+
+  await dart(page, '18', 'Treble');
+  await place(page, '18 row');
+  await dart(page, '18', 'Treble');
+  await expect(choices).toContainText('18 row: 54 points');
+  await place(page, '18 row');
+  await expect(page.locator('#score-0')).toHaveText('54');
 });

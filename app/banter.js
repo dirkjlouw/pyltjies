@@ -8,15 +8,36 @@ const WIN_LINES = [
   '{w} took that off {l}. {l} is buying the next round.',
   '{l} lost to {w}. The wall behind the board is the real casualty.',
   '{w} wins. {l} will be explaining this one for a while.',
+  // The saloon
+  '{w} rode into town and cleaned out {l}. Drinks are on {l}.',
+  "This board ain't big enough for {w} and {l}, so {l} can saddle up.",
+  '{l} drew first and still missed the board. {w} tips the hat.',
+  '{w} ran {l} out of town. Mind the swinging doors on the way out.',
+  '{w} is the new sheriff. {l} can polish the spittoon.',
+  '{l} was snookered all night by {w}. No shot, no chalk, no excuses.',
+  '{w} cleared the table while {l} looked for the chalk.',
 ];
 const CLOSE_LINES = [
   '{w} just about got past {l}. Sweaty palms all round.',
   'Could have gone either way, but {w} got it and {l} has to hear about it.',
+  'A showdown at high noon, and {w} got there a whisker before {l}.',
+  'Down to the last black, and {w} potted it. Hard luck, {l}.',
 ];
 const HEAVY_LINES = [
   '{w} absolutely flattened {l}. Somebody check on {l}.',
   '{l} never got out of the car park. {w} wins by a mile.',
+  '{l} got lassoed, hog-tied and sent home by {w}.',
+  "Tumbleweed rolled past {l}'s score. {w} wins by a country mile.",
+  '{w} made a century break, and {l} never left the chair.',
 ];
+
+// Everyone gets a rank on the ladder. Whoever is last is always the greenhorn.
+const RANKS = ['Sheriff', 'Deputy', 'Gunslinger', 'Card sharp', 'Cowhand', 'Stable hand'];
+
+export function ladderRank(index, total) {
+  if (total > 1 && index === total - 1) return 'Greenhorn';
+  return RANKS[Math.min(index, RANKS.length - 1)];
+}
 
 const hashOf = (text) => [...String(text)].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % 100_003, 7);
 const pick = (lines, seed) => lines[hashOf(seed) % lines.length];

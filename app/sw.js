@@ -1,5 +1,5 @@
 // Offline: cache the app shell. The cache name carries the release version (same as package.json).
-const VERSION = 'pyltjies-0.1.0';
+const VERSION = 'pyltjies-0.1.1';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'games.js', 'rating.js', 'banter.js', 'version.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (event) => {
