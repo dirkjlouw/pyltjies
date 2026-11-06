@@ -6,6 +6,10 @@ The decisions below are the owner's, from 2026-11-06, unless marked as our own s
 
 The code is open source, and each group runs its own copy. One server is one private league. The owner signs in first and anyone in the league can invite a friend. Invite links work for one person and last 7 days. Sign-in is a 6-digit emailed code. League routes return names only, never email addresses. Results leave only when someone shares a result picture or text.
 
+Everyone can see who is in the league and when they joined, with a New tag for the first 7 days. Only the owner sees when each person was last around.
+
+You stay signed in for up to 400 days on each browser. On an iPhone, the home screen app and Safari keep separate sign-ins, so you sign in once in each. Games and results are the same in both once saved. A game still in play lives only where it was started.
+
 Guests are name-only players. They appear in the match log and stay off the ladder and ratings.
 
 ## Entering darts

@@ -170,6 +170,10 @@ function renderSetup() {
   const limit = maxHead(config);
 
   return h('div', {},
+    members().length < 2 ? h('section', { class: 'card', id: 'just-you' },
+      h('h2', {}, 'Just you in here'),
+      h('p', { class: 'muted' }, 'Invite someone to lose to you, or add them as a guest below.'),
+      h('div', { class: 'actions' }, h('button', { type: 'button', class: 'primary', onclick: shareInvite }, 'Share an invite'))) : null,
     h('section', { class: 'card' },
       h('h2', {}, 'New game'),
       h('div', { class: 'segments', role: 'group', 'aria-label': 'Game' },
@@ -718,6 +722,39 @@ function renderLadder() {
 
 // ---- You ----
 
+const NEW_FOR_MS = 7 * 86_400_000;
+
+function memberLine(member) {
+  const seen = member.lastSeenAt ? `, last seen ${dayLabel(member.lastSeenAt)}` : '';
+  return h('li', {},
+    `${member.name}${member.you ? ' (you)' : ''}`,
+    member.joinedAt && Date.now() - member.joinedAt < NEW_FOR_MS ? h('span', { class: 'new-tag' }, 'New') : null,
+    member.joinedAt ? h('small', { class: 'rank' }, `Joined ${dayLabel(member.joinedAt)}${seen}`) : null);
+}
+
+/** One tap: make a link and open the phone's share sheet. The link also stays on screen, in case sharing is refused. */
+async function shareInvite() {
+  try {
+    ui.invites = (await api('POST', '/api/invites', {})).invites;
+  } catch (error) {
+    toast(error.message);
+    return;
+  }
+  ui.view = 'you';
+  render();
+  const { url } = ui.invites[0];
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'Pyltjies', text: 'Come and lose at darts on Pyltjies.', url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    toast('Invite link copied');
+  } catch (error) {
+    if (error.name !== 'AbortError') toast('Your invite link is on this screen. Copy it from there.');
+  }
+}
+
 function renderYou() {
   const emailInput = h('input', { type: 'email', autocomplete: 'off', inputmode: 'email' });
   const showInvite = (invite) => h('li', {},
@@ -750,11 +787,11 @@ function renderYou() {
       h('h2', {}, me.name),
       h('p', { class: 'muted' }, me.email),
       h('h3', {}, 'The league'),
-      h('ul', { class: 'people', id: 'people' }, members().map((member) => h('li', {}, `${member.name}${member.you ? ' (you)' : ''}`)))),
+      h('ul', { class: 'people', id: 'people' }, members().map(memberLine))),
     h('section', { class: 'card' },
       h('h2', {}, 'Invite a friend'),
       h('p', { class: 'muted' }, 'Each link works for one person and lasts 7 days.'),
-      h('div', { class: 'actions' }, h('button', { type: 'button', class: 'primary', onclick: () => invite({}) }, 'Make an invite link')),
+      h('div', { class: 'actions' }, h('button', { type: 'button', class: 'primary', onclick: shareInvite }, 'Share an invite')),
       h('form', {
         class: 'inline-form',
         onsubmit: (event) => { event.preventDefault(); if (emailInput.value) invite({ email: emailInput.value }); },

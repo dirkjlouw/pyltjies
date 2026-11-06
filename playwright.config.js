@@ -1,4 +1,5 @@
-// Flows in real browser engines: WebKit = iPhone Safari, Chromium = Android Chrome and desktop.
+// Flows in real browser engines: WebKit = Safari, Chromium = Chrome, Edge and Brave, Gecko = Firefox.
+// These are the engines with simulated devices, not real phones.
 // Run in the Playwright Docker image (same as CI):
 //   docker run --rm -v "$PWD":/w -w /w mcr.microsoft.com/playwright:v1.64.1-noble sh -c "npm ci && npx playwright test"
 
@@ -21,6 +22,11 @@ export default defineConfig({
     { name: 'iphone', use: { ...devices['iPhone 13'] } },
     { name: 'android', use: { ...devices['Pixel 7'] } },
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    { name: 'desktop-safari', use: { ...devices['Desktop Safari'] } },
+    { name: 'desktop-firefox', use: { ...devices['Desktop Firefox'] } },
+    // Sideways skips sign-in: more runs would hit the app's limit of 10 code requests per 15 minutes.
+    { name: 'iphone-sideways', use: { ...devices['iPhone 13 landscape'] }, testIgnore: 'auth.spec.js' },
+    { name: 'android-sideways', use: { ...devices['Pixel 7 landscape'] }, testIgnore: 'auth.spec.js' },
   ],
   webServer: {
     command: `node --disable-warning=ExperimentalWarning server/server.js > "${path.join(ROOT, 'server.log')}" 2>&1`,

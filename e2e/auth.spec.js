@@ -27,7 +27,11 @@ test('a member invites a friend, who joins with the link and sees the league', a
   const host = await hostContext.newPage();
   await host.goto('/');
   await nav(host).getByRole('button', { name: 'You' }).click();
-  await host.getByRole('button', { name: 'Make an invite link' }).click();
+  await host.evaluate(() => { window.sharedInvites = []; navigator.share = async (data) => { window.sharedInvites.push(data); }; });
+  await host.getByRole('button', { name: 'Share an invite' }).click();
+  await expect(host.locator('#invites .invite-link').first()).toBeVisible();
+  await expect.poll(() => host.evaluate(() => window.sharedInvites.length)).toBe(1);
+  expect(await host.evaluate(() => window.sharedInvites[0].url)).toContain('?invite=');
   const url = (await host.locator('#invites .invite-link').first().textContent()).trim();
   const invite = new URL(url).search;
 
@@ -44,9 +48,26 @@ test('a member invites a friend, who joins with the link and sees the league', a
   await expect(friend.locator('#who')).toHaveText(friendName);
   expect(new URL(friend.url()).search).toBe('');
   await expect(friend.getByRole('button', { name: hostName })).toBeVisible();
+  await nav(friend).getByRole('button', { name: 'You' }).click();
+  const line = friend.locator('#people li', { hasText: friendName });
+  await expect(line).toContainText('New');
+  await expect(line).toContainText('Joined');
+  await expect(friend.locator('#people')).not.toContainText('last seen');
 
   await hostContext.close();
   await friendContext.close();
+});
+
+test('you stay signed in after closing and reopening', async ({ page, context }) => {
+  const name = uniqueName('Stayer');
+  await seedUser(context, { name });
+  await page.goto('/');
+  await expect(page.locator('#who')).toHaveText(name);
+  await page.close();
+  const again = await context.newPage();
+  await again.goto('/');
+  await expect(again.locator('#who')).toHaveText(name);
+  await expect(again.getByRole('heading', { name: 'Sign in' })).toBeHidden();
 });
 
 test('signing out clears this phone', async ({ page, context }) => {

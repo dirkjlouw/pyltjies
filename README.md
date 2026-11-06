@@ -10,6 +10,10 @@ No ads, no tracking, and nobody is making money from this. It's just for fun, an
 - **League:** a ladder, head-to-heads, match log, banter and result pictures for WhatsApp.
 - **Works without signal:** a game lives on the phone, and a finished one is sent when you're back online.
 
+## Browsers
+
+Automated tests run on the engines behind Safari, Chrome, Edge, Brave and Firefox, at phone and desktop sizes, upright and sideways. Those are simulated devices, so tell us if something looks wrong on a real one.
+
 ## Run your own
 
 Each group of friends runs its own copy, so every league is its own. The code is public, but your league isn't: games, names and banter stay behind sign-in on your server. See [DEPLOY.md](DEPLOY.md).
