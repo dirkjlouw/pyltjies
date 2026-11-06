@@ -1,0 +1,13 @@
+.git
+.github
+.claude
+node_modules
+data
+tests
+scripts
+test-results
+.env
+*.md
+e2e
+playwright.config.js
+playwright-report

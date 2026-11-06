@@ -1,0 +1,24 @@
+name: pyltjies
+
+# HTTPS comes from a reverse proxy: point it at <this-host>:8080 (see DEPLOY.md).
+services:
+  pyltjies:
+    build: .
+    image: pyltjies:latest
+    container_name: pyltjies
+    restart: unless-stopped
+    # Settings come from .env. See .env.example.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      TZ: ${TZ:-Africa/Johannesburg}
+      # 1 = trust X-Forwarded-For and -Proto from the proxy. Set 0 if the port is reached directly.
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+    ports:
+      - "${PYLTJIES_PORT:-8080}:8080"
+    volumes:
+      - pyltjies-data:/data
+
+volumes:
+  pyltjies-data:
