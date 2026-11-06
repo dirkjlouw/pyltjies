@@ -4,7 +4,7 @@ The decisions below are the owner's, from 2026-11-06, unless marked as our own s
 
 ## People and privacy
 
-One server is one private league. The owner signs in first and anyone in the league can invite a friend. Invite links work for one person and last 7 days. Sign-in is a 6-digit emailed code. League routes return names only, never email addresses. Results leave only when someone shares a result picture or text.
+The code is open source, and each group runs its own copy. One server is one private league. The owner signs in first and anyone in the league can invite a friend. Invite links work for one person and last 7 days. Sign-in is a 6-digit emailed code. League routes return names only, never email addresses. Results leave only when someone shares a result picture or text.
 
 Guests are name-only players. They appear in the match log and stay off the ladder and ratings.
 
