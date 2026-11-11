@@ -27,6 +27,15 @@
 - **Quick shots:** one-tap banter on a match, such as "Saddle up", "Who taught you?" and "Buy your own drink".
 - **Outlaw names:** pick a saloon nickname, such as Doc Treble or Bed and Breakfast Bill.
 
+## Camera scoring
+
+Built in its own repo, [pyltjies-vision](https://github.com/dirkjlouw/pyltjies-vision), under AGPL-3.0, because the model it trains uses Ultralytics YOLO. This app stays MIT and only calls it over HTTP. Its PLAN.md has the detail.
+
+1. **Photo test:** about 30 labelled photos of a worn board, read by Gemini, to see how many darts it gets right.
+2. **Photo, suggest, fix:** a camera button after three darts fills in the pad. A wrong dart is fixed by dragging its marker to where the tip is, which is what trains a model.
+3. **Our own model:** trained on those corrections and run by a Go service on the server.
+4. **Camera on a stand:** a fixed phone or webcam suggests each dart. About 60% right is the target.
+
 ## Then: 0.3, more banter
 
 - Reactions on matches, and a weekly roast of the worst night.
@@ -35,7 +44,5 @@
 
 ## Later
 
-- Teams in Killer, since the board has two sides.
 - Seasons with a ladder reset and a champion.
 - Voice entry as an option. Speech recognition in iPhone PWAs is unreliable.
-- Camera scoring stays a long shot, needing its own model and several cameras to be reliable.
