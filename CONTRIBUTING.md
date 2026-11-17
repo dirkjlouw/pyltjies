@@ -21,7 +21,7 @@ The style rules are in [CLAUDE.md](CLAUDE.md): plain ES modules, no build step, 
 
 ## Who decides
 
-The maintainer, [dirkjlouw](https://github.com/dirkjlouw), reviews every pull request and approves what goes into `main`. Nothing merges without that approval. If your idea doesn't fit, you're free to run it in your own fork.
+The maintainer, [dirkjlouw](https://github.com/dirkjlouw), reviews every pull request and approves what goes into `main`. Nothing merges without that approval. CI on a pull request from a fork waits until the maintainer has looked at it and pressed approve, so don't worry if your checks sit waiting. If your idea doesn't fit, you're free to run it in your own fork.
 
 By contributing, you agree that your work is released under the [MIT License](LICENSE).
 
