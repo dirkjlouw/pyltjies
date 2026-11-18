@@ -10,7 +10,7 @@ Rules for any person or AI agent changing this repo. Read SPEC.md first. This is
 - **Docs move with the code:** README.md, SPEC.md, ROADMAP.md and DEPLOY.md are updated in the same PR as the change they describe.
 - **PR description:** what changed, why, how it was tested, plus PR comments for anything a reviewer should look at.
 - **Public repo:** never commit home network details, addresses, host names, keys or personal email addresses. The code is public; league data stays private behind sign-in.
-- **Merging and deploying need the owner's go-ahead.** Never merge your own PR or run `ship.sh` without being asked.
+- **Merging and deploying need the owner's go-ahead.** `main` is protected by a ruleset: changes go in by pull request with green CI, with no force pushes and no deleting it. Only the owner has write access, so only the owner can merge, and merging is their approval. Agents merge only when the owner says so, and never bypass the rules. Never run `ship.sh` without being asked.
 - **Figures have sources:** handicap and league figures in `app/rating.js` say where they came from, or that they're our own starting point.
 - **Privacy:** no public links, analytics or third-party scripts. Never commit `.env` or `data/`. League routes return names, never email addresses.
 - **Style:** plain ES modules, no build step, no framework, strict CSP with no inline scripts or `style=""`. Sentence case, no emoji in the UI. User text goes in as text, never as HTML.
